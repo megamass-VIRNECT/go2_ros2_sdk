@@ -1,9 +1,33 @@
+# ROS2 Build artifacts
 build
 log
 install
+
+# IDE
 .vscode
+.idea
+
+# Python
 __pycache__
+*.pyc
+*.pyo
+*.egg-info
+.pytest_cache
+.coverage
+coverage.xml
+htmlcov/
+
+# Environment
 .env
+.venv
+venv/
+
+# Claude Code
+.claude/
+
+# macOS
 .DS_Store
+
+# Project specific
 go2_robot_sdk/.coverage
 go2_robot_sdk/coverage.xml
