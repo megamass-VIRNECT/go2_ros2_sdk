@@ -150,7 +150,7 @@ class LidarToPointCloudNode(Node):
             # Single robot mode
             subscription = self.create_subscription(
                 PointCloud2,
-                '/robot0/point_cloud2',
+                'point_cloud2',
                 self._lidar_callback,
                 self.qos_profile
             )
