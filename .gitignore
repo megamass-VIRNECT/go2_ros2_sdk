@@ -31,3 +31,11 @@ venv/
 # Project specific
 go2_robot_sdk/.coverage
 go2_robot_sdk/coverage.xml
+
+# Map files (cartographer/nav2 generated maps)
+*.pgm
+*.posegraph
+*.data
+*map*.yaml
+!*params*.yaml
+!*config*.yaml
