@@ -36,9 +36,19 @@ class CryptoUtils:
     def rsa_load_public_key(pem_data: str) -> RSA.RsaKey:
         """Load an RSA public key from a PEM-formatted string"""
         try:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f"DEBUG: Attempting to load RSA key, pem_data length={len(pem_data)}")
+            logger.info(f"DEBUG: pem_data (first 100 chars): {pem_data[:100]}")
+
             key_bytes = base64.b64decode(pem_data)
+            logger.info(f"DEBUG: Decoded key_bytes length={len(key_bytes)}, first 50 bytes: {key_bytes[:50]}")
+
             return RSA.import_key(key_bytes)
         except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"DEBUG: RSA.import_key failed with error: {type(e).__name__}: {e}")
             raise EncryptionError(f"Failed to load RSA public key: {e}")
     
     @staticmethod

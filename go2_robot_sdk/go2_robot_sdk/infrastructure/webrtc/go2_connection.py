@@ -254,16 +254,24 @@ class Go2Connection:
                 
                 # Extract the 'data1' and 'data2' fields from the JSON
                 data1 = decoded_json.get('data1')
-				data2 = decoded_json.get('data2')
+                data2 = decoded_json.get('data2')
+
+                logger.info(f"DEBUG: data1 length={len(data1) if data1 else 0}, data2={data2}")
+
                 if not data1:
                     raise Go2ConnectionError("No data1 field in public key response")
 
                 if data2 == 2:
+                    logger.info("DEBUG: Decrypting data1 (firmware >= 1.1.8)")
                     data1 = self.decrypt_con_notify_data(data1)
+                    logger.info(f"DEBUG: Decrypted data1 length={len(data1)}")
+
                 # Extract the public key from 'data1'
                 public_key_pem = data1[10:len(data1)-10]
+                logger.info(f"DEBUG: public_key_pem length={len(public_key_pem)}, first 50 chars: {public_key_pem[:50]}")
+
                 path_ending = PathCalculator.calc_local_path_ending(data1)
-                
+
                 logger.info(f"Extracted path ending: {path_ending}")
                 
             except (WebRTCHttpError, EncryptionError) as e:

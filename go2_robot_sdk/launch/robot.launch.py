@@ -5,10 +5,10 @@ import os
 from typing import List
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.conditions import IfCondition
-from launch.substitutions import LaunchConfiguration
+from launch.conditions import IfCondition, UnlessCondition
+from launch.substitutions import LaunchConfiguration, PythonExpression
 from launch_ros.actions import Node
-from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument
+from launch.actions import IncludeLaunchDescription, DeclareLaunchArgument, ExecuteProcess
 from launch.launch_description_sources import FrontendLaunchDescriptionSource, PythonLaunchDescriptionSource
 
 
@@ -83,6 +83,7 @@ class Go2NodeFactory:
             DeclareLaunchArgument('rviz2', default_value='true', description='Launch RViz2'),
             DeclareLaunchArgument('nav2', default_value='true', description='Launch Nav2'),
             DeclareLaunchArgument('slam', default_value='true', description='Launch SLAM'),
+            DeclareLaunchArgument('map', default_value='', description='Path to map yaml file for Nav2 localization'),
             DeclareLaunchArgument('foxglove', default_value='true', description='Launch Foxglove Bridge'),
             DeclareLaunchArgument('joystick', default_value='true', description='Launch joystick'),
             DeclareLaunchArgument('teleop', default_value='true', description='Launch teleoperation'),
@@ -292,19 +293,20 @@ class Go2NodeFactory:
         with_foxglove = LaunchConfiguration('foxglove', default='true')
         with_slam = LaunchConfiguration('slam', default='true')
         with_nav2 = LaunchConfiguration('nav2', default='true')
-        
+        map_yaml = LaunchConfiguration('map', default='')
+
         foxglove_launch = os.path.join(
             get_package_share_directory('foxglove_bridge'),
             'launch', 'foxglove_bridge_launch.xml'
         )
-        
+
         return [
             # Foxglove Bridge
             IncludeLaunchDescription(
                 FrontendLaunchDescriptionSource(foxglove_launch),
                 condition=IfCondition(with_foxglove),
             ),
-            # SLAM Toolbox
+            # SLAM Toolbox (for mapping)
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     os.path.join(get_package_share_directory('slam_toolbox'),
@@ -316,7 +318,22 @@ class Go2NodeFactory:
                     'use_sim_time': use_sim_time,
                 }.items(),
             ),
-            # Nav2
+            # Nav2 Localization (map_server + AMCL) - only when slam is false and nav2 is true
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource([
+                    os.path.join(get_package_share_directory('nav2_bringup'),
+                                'launch', 'localization_launch.py')
+                ]),
+                condition=IfCondition(PythonExpression([
+                    '"', with_nav2, '" == "true" and "', with_slam, '" == "false" and "', map_yaml, '" != ""'
+                ])),
+                launch_arguments={
+                    'map': map_yaml,
+                    'params_file': self.config.config_paths['nav2'],
+                    'use_sim_time': use_sim_time,
+                }.items(),
+            ),
+            # Nav2 Navigation (planner + controller + behaviors)
             IncludeLaunchDescription(
                 PythonLaunchDescriptionSource([
                     os.path.join(get_package_share_directory('nav2_bringup'),
@@ -333,11 +350,11 @@ class Go2NodeFactory:
 
 def generate_launch_description():
     """Generate the launch description for Go2 robot system"""
-    
+
     # Initialize configuration and factory
     config = Go2LaunchConfig()
     factory = Go2NodeFactory(config)
-    
+
     # Create all components
     launch_args = factory.create_launch_arguments()
     robot_state_nodes = factory.create_robot_state_nodes()
@@ -345,7 +362,21 @@ def generate_launch_description():
     teleop_nodes = factory.create_teleop_nodes()
     visualization_nodes = factory.create_visualization_nodes()
     include_launches = factory.create_include_launches()
-    
+
+    # Get launch configurations
+    with_nav2 = LaunchConfiguration('nav2', default='true')
+    with_slam = LaunchConfiguration('slam', default='true')
+    map_yaml = LaunchConfiguration('map', default='')
+
+    # Auto-localization process (when nav2=true, slam=false, and map is provided)
+    auto_localize_process = ExecuteProcess(
+        condition=IfCondition(PythonExpression([
+            '"', with_nav2, '" == "true" and "', with_slam, '" == "false" and "', map_yaml, '" != ""'
+        ])),
+        cmd=['bash', '-c', 'sleep 8 && ros2 service call /reinitialize_global_localization std_srvs/srv/Empty && echo "Auto-localization triggered"'],
+        output='screen'
+    )
+
     # Combine all elements
     launch_entities = (
         launch_args +
@@ -353,7 +384,8 @@ def generate_launch_description():
         core_nodes +
         teleop_nodes +
         visualization_nodes +
-        include_launches
+        include_launches +
+        [auto_localize_process]
     )
-    
+
     return LaunchDescription(launch_entities)
