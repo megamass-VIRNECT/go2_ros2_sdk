@@ -191,7 +191,11 @@ class Go2NodeFactory:
                 parameters=[{
                     'robot_ip': self.config.robot_ip,
                     'token': self.config.robot_token,
-                    'conn_type': self.config.conn_type
+                    'conn_type': self.config.conn_type,
+                    'enable_video': True,
+                    'decode_lidar': True,
+                    'publish_raw_voxel': False,
+                    'obstacle_avoidance': False,
                 }],
             ),
             # LiDAR processing node (new separate package)
