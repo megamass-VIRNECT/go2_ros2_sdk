@@ -267,12 +267,14 @@ map_server:
     # Overridden in launch by the "map" launch configuration or provided default value.
     # To use in yaml, remove the default "map" value in the tb3_simulation_launch.py file & provide full path to map below.
     yaml_filename: ""
+    free_thresh: 0.18
+    occupied_thresh: 0.65
 
 map_saver:
   ros__parameters:
     use_sim_time: False
     save_map_timeout: 5.0
-    free_thresh_default: 0.25
+    free_thresh_default: 0.18
     occupied_thresh_default: 0.65
     map_subscribe_transient_local: True
 
